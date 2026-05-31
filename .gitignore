@@ -16,9 +16,6 @@ __pycache__/
 # MLflow (akan kita tambahkan nanti, tapi siapkan sekarang)
 mlruns/
 
-# Data files (ukurannya besar, tidak perlu di-commit)
-data/
-
 # OS files
 .DS_Store
 Thumbs.db
