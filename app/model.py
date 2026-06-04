@@ -7,9 +7,10 @@ from sklearn.model_selection import train_test_split
 import warnings
 warnings.filterwarnings('ignore')
 
-mlflow.set_tracking_uri(
-    "file:///D:/AI Journey/project_01/salary_predictor/mlruns"
-)
+import os
+
+base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+mlflow.set_tracking_uri(f"file:///{base_dir}/mlruns".replace("\\", "/"))
 
 _model = None
 _encoder = None
@@ -47,11 +48,25 @@ def _build_encoder():
 
 
 def load_model():
-    """Load model dari MLflow Model Registry."""
+    """Load model langsung pakai joblib dari artifact path."""
     global _model, _encoder
     if _model is None:
-        print("Loading model dari MLflow registry...")
-        _model = mlflow.sklearn.load_model("models:/salary-predictor-v1/1")
+        import joblib
+
+        print("Loading model...")
+
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        model_path = os.path.join(
+            base_dir, "mlruns",
+            "106348724337139234",
+            "models",
+            "m-90646b00300c45408104b75d340d3f5f",
+            "artifacts",
+            "model.pkl"
+        )
+
+        print(f"Loading dari: {model_path}")
+        _model = joblib.load(model_path)
         _encoder = _build_encoder()
         print("Model loaded!")
     return _model, _encoder
@@ -63,7 +78,6 @@ def predict(features: dict) -> float:
 
     df = pd.DataFrame([features])
 
-    # Derived features
     df['is_fully_remote'] = (df['remote_ratio'] == 100).astype(int)
     df['is_large_company'] = (df['company_size'] == 'L').astype(int)
     df['is_senior'] = df['experience_level'].isin(['SE', 'EX']).astype(int)
