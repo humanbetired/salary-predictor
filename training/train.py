@@ -19,12 +19,10 @@ def load_and_preprocess(data_path: str):
     """Load, filter, dan preprocess dataset."""
     df = pd.read_csv(data_path)
 
-    # Filter outlier dan negara
     df = df[(df['salary_in_usd'] >= 20000) & (df['salary_in_usd'] <= 500000)]
     top_countries = ['US', 'GB', 'CA', 'ES', 'DE']
     df = df[df['company_location'].isin(top_countries)].copy()
 
-    # Feature engineering
     df['is_fully_remote'] = (df['remote_ratio'] == 100).astype(int)
     df['is_large_company'] = (df['company_size'] == 'L').astype(int)
     df['is_senior'] = df['experience_level'].isin(['SE', 'EX']).astype(int)
@@ -47,11 +45,9 @@ def load_and_preprocess(data_path: str):
         X, y, test_size=0.2, random_state=42
     )
 
-    # Sample weights
     level_weights = {'EN': 3.0, 'MI': 1.5, 'SE': 1.0, 'EX': 4.0}
     sample_weights = X_train['experience_level'].map(level_weights).values
 
-    # Target encoding
     te = TargetEncoder(cols=cat_cols)
     X_train_enc = te.fit_transform(X_train, y_train)
     X_test_enc = te.transform(X_test)
@@ -78,23 +74,18 @@ def run_experiment(run_name: str, model, params: dict,
     mlflow.set_experiment("salary-predictor")
 
     with mlflow.start_run(run_name=run_name):
-        # Train
         if isinstance(model, XGBRegressor):
             model.fit(X_train_enc, y_train, sample_weight=sample_weights)
         else:
             model.fit(X_train_enc, y_train)
 
-        # Evaluate
         mae, r2 = evaluate(model, X_test_enc, y_test)
 
-        # Log params
         mlflow.log_params(params)
 
-        # Log metrics
         mlflow.log_metric("mae_usd", mae)
         mlflow.log_metric("r2_score", r2)
 
-        # Log model
         if isinstance(model, XGBRegressor):
             mlflow.xgboost.log_model(model, "model")
         else:
@@ -110,7 +101,6 @@ if __name__ == "__main__":
     X_train_enc, X_test_enc, y_train, y_test, sample_weights, te, X_train = \
         load_and_preprocess("data/ml_salaries.csv")
 
-    # ── Eksperimen 1: Random Forest baseline ──
     run_experiment(
         run_name="rf-baseline",
         model=RandomForestRegressor(n_estimators=100, random_state=42),
@@ -120,7 +110,6 @@ if __name__ == "__main__":
         sample_weights=sample_weights, te=te
     )
 
-    # ── Eksperimen 2: Random Forest lebih dalam ──
     run_experiment(
         run_name="rf-deeper",
         model=RandomForestRegressor(n_estimators=300, max_depth=15, random_state=42),
@@ -130,7 +119,6 @@ if __name__ == "__main__":
         sample_weights=sample_weights, te=te
     )
 
-    # ── Eksperimen 3: Gradient Boosting ──
     run_experiment(
         run_name="gbm-baseline",
         model=GradientBoostingRegressor(n_estimators=200, random_state=42),
@@ -140,7 +128,6 @@ if __name__ == "__main__":
         sample_weights=sample_weights, te=te
     )
 
-    # ── Eksperimen 4: XGBoost baseline ──
     run_experiment(
         run_name="xgb-baseline",
         model=XGBRegressor(n_estimators=300, max_depth=5,
@@ -152,7 +139,6 @@ if __name__ == "__main__":
         sample_weights=sample_weights, te=te
     )
 
-    # ── Eksperimen 5: XGBoost best params dari Milestone 1 ──
     run_experiment(
         run_name="xgb-tuned",
         model=XGBRegressor(
