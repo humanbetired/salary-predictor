@@ -1,0 +1,45 @@
+version: '3.9'
+
+services:
+
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: salary-fastapi
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./mlruns:/app/mlruns
+    environment:
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - salary-network
+
+  django:
+    build:
+      context: .
+      dockerfile: Dockerfile.django
+    container_name: salary-django
+    ports:
+      - "8080:8080"
+    environment:
+      - FASTAPI_URL=http://fastapi:8000
+      - DJANGO_SECRET_KEY=local-dev-secret-key-change-in-production
+      - DEBUG=True
+    depends_on:
+      fastapi:
+        condition: service_healthy
+    networks:
+      - salary-network
+
+networks:
+  salary-network:
+    driver: bridge
